@@ -1,0 +1,92 @@
+# =========================
+# Python
+# =========================
+
+__pycache__/
+*.py[cod]
+*.pyo
+
+.venv/
+venv/
+env/
+ENV/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# =========================
+# Environment / Secrets
+# =========================
+
+.env
+.env.*
+!.env.example
+
+# =========================
+# Node.js
+# =========================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# =========================
+# Build files
+# =========================
+
+dist/
+build/
+.next/
+out/
+
+# =========================
+# IDE
+# =========================
+
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.idea/
+
+# =========================
+# OS
+# =========================
+
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Logs
+# =========================
+
+*.log
+
+# =========================
+# Medical / User Data
+# =========================
+
+data/raw/
+data/uploads/
+data/private/
+uploads/
+
+# =========================
+# AI / Model Files
+# =========================
+
+models/
+*.bin
+*.safetensors
+*.gguf
+
+# =========================
+# Temporary files
+# =========================
+
+tmp/
+temp/
+*.tmp
