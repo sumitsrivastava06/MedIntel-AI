@@ -78,7 +78,7 @@ uploads/
 # AI / Model Files
 # =========================
 
-models/
+/models/
 *.bin
 *.safetensors
 *.gguf
