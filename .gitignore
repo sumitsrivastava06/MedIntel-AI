@@ -68,10 +68,7 @@ desktop.ini
 # =========================
 # Medical / User Data
 # =========================
-
-data/raw/
-data/uploads/
-data/private/
+data/
 uploads/
 
 # =========================
