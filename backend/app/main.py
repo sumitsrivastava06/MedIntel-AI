@@ -8,6 +8,8 @@ from sqlalchemy import text
 from backend.app.database import SessionLocal, engine
 from backend.app.models.document import Document
 from backend.app.models.patient import Patient
+from backend.app.services.pdf_extractor import extract_text_from_pdf
+
 
 app = FastAPI(
     title="MedIntel AI API",
@@ -75,13 +77,16 @@ def upload_document(
         with file_path.open("wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
+        extracted_text = extract_text_from_pdf(file_path)
+
         document = Document(
             id=document_id,
             patient_id=patient_id,
             filename=file.filename or safe_filename,
             document_type="medical_report",
             storage_path=str(file_path),
-            status="uploaded",
+            extracted_text=extracted_text,
+            status="processed",
         )
 
         db.add(document)
@@ -94,6 +99,7 @@ def upload_document(
             "filename": document.filename,
             "storage_path": document.storage_path,
             "status": document.status,
+            "extracted_text_length": len(document.extracted_text or ""),
         }
 
     except HTTPException:
@@ -107,10 +113,9 @@ def upload_document(
 
         raise HTTPException(
             status_code=500,
-            detail="Failed to upload document",
+            detail="Failed to upload and process document",
         )
 
     finally:
         db.close()
-        
 
