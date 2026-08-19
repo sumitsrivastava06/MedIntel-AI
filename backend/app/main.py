@@ -119,3 +119,30 @@ def upload_document(
     finally:
         db.close()
 
+
+@app.get("/documents/{document_id}")
+def get_document(document_id: UUID):
+    db = SessionLocal()
+
+    try:
+        document = db.get(Document, document_id)
+
+        if document is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found",
+            )
+
+        return {
+            "document_id": str(document.id),
+            "patient_id": str(document.patient_id),
+            "filename": document.filename,
+            "document_type": document.document_type,
+            "storage_path": document.storage_path,
+            "status": document.status,
+            "uploaded_at": document.uploaded_at,
+            "extracted_text": document.extracted_text,
+        }
+
+    finally:
+        db.close()
