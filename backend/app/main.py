@@ -1,3 +1,4 @@
+
 import shutil
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -8,7 +9,11 @@ from sqlalchemy import text
 from backend.app.database import SessionLocal, engine
 from backend.app.models.document import Document
 from backend.app.models.patient import Patient
+from backend.app.models.clinical_observation import ClinicalObservation
 from backend.app.services.pdf_extractor import extract_text_from_pdf
+from backend.app.services.clinical_extractor import extract_clinical_observations
+from backend.app.services.report_date_extractor import extract_report_date
+from backend.app.services.trend_analyzer import analyze_trends
 
 
 app = FastAPI(
@@ -79,6 +84,12 @@ def upload_document(
 
         extracted_text = extract_text_from_pdf(file_path)
 
+        report_date = extract_report_date(extracted_text)
+
+        observations = extract_clinical_observations(
+            extracted_text
+        )
+
         document = Document(
             id=document_id,
             patient_id=patient_id,
@@ -86,34 +97,62 @@ def upload_document(
             document_type="medical_report",
             storage_path=str(file_path),
             extracted_text=extracted_text,
+            report_date=report_date,
             status="processed",
         )
 
         db.add(document)
+        db.flush()
+
+        for observation in observations:
+            clinical_observation = ClinicalObservation(
+                document_id=document_id,
+                patient_id=patient_id,
+                test_name=observation["test_name"],
+                value=observation["value"],
+                value_text=observation["value_text"],
+                unit=observation["unit"],
+                reference_range=observation["reference_range"],
+                status=observation["status"],
+            )
+
+            db.add(clinical_observation)
+
         db.commit()
-        db.refresh(document)
 
         return {
             "document_id": str(document.id),
             "patient_id": str(document.patient_id),
             "filename": document.filename,
             "storage_path": document.storage_path,
+            "report_date": (
+                document.report_date.isoformat()
+                if document.report_date
+                else None
+            ),
             "status": document.status,
-            "extracted_text_length": len(document.extracted_text or ""),
+            "extracted_text_length": len(
+                document.extracted_text or ""
+            ),
+            "observations_created": len(observations),
         }
 
     except HTTPException:
         raise
 
-    except Exception:
+    except Exception as exc:
         db.rollback()
 
         if file_path is not None and file_path.exists():
             file_path.unlink()
 
+        print(
+            f"UPLOAD ERROR: {type(exc).__name__}: {exc}"
+        )
+
         raise HTTPException(
             status_code=500,
-            detail="Failed to upload and process document",
+            detail="Upload processing failed",
         )
 
     finally:
@@ -139,9 +178,70 @@ def get_document(document_id: UUID):
             "filename": document.filename,
             "document_type": document.document_type,
             "storage_path": document.storage_path,
+            "report_date": (
+                document.report_date.isoformat()
+                if document.report_date
+                else None
+            ),
             "status": document.status,
             "uploaded_at": document.uploaded_at,
             "extracted_text": document.extracted_text,
+        }
+
+    finally:
+        db.close()
+
+
+@app.get("/patients/{patient_id}/trends")
+def get_patient_trends(patient_id: UUID):
+    db = SessionLocal()
+
+    try:
+        patient = db.get(Patient, patient_id)
+
+        if patient is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Patient not found",
+            )
+
+        rows = (
+            db.query(ClinicalObservation, Document)
+            .join(
+                Document,
+                ClinicalObservation.document_id == Document.id,
+            )
+            .filter(
+                ClinicalObservation.patient_id == patient_id
+            )
+            .all()
+        )
+
+        observation_data = []
+
+        for observation, document in rows:
+            observed_at = (
+                document.report_date.isoformat()
+                if document.report_date
+                else None
+            )
+
+            observation_data.append(
+                {
+                    "test_name": observation.test_name,
+                    "value": observation.value,
+                    "unit": observation.unit,
+                    "status": observation.status,
+                    "observed_at": observed_at,
+                }
+            )
+
+        trends = analyze_trends(observation_data)
+
+        return {
+            "patient_id": str(patient_id),
+            "observation_count": len(observation_data),
+            "trends": trends,
         }
 
     finally:

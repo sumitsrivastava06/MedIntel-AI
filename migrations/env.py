@@ -8,7 +8,7 @@ from sqlalchemy import create_engine, pool
 from backend.app.models.base import Base
 from backend.app.models.patient import Patient
 from backend.app.models.document import Document
-
+from backend.app.models.clinical_observation import ClinicalObservation
 
 load_dotenv()
 

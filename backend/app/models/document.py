@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import Date, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from backend.app.models.base import Base
@@ -37,6 +37,11 @@ class Document(Base):
 
     extracted_text: Mapped[str | None] = mapped_column(
         Text,
+        nullable=True,
+    )
+
+    report_date: Mapped[date | None] = mapped_column(
+        Date,
         nullable=True,
     )
 
